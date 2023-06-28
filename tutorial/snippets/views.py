@@ -3,7 +3,9 @@
 # from rest_framework.parsers import JSONParser
 from rest_framework import status
 from rest_framework.response import Response
-# from rest_framework.decorators import api_view
+from rest_framework.reverse import reverse
+from rest_framework.decorators import api_view, action
+from rest_framework import viewsets
 from snippets.permissions import IsOwnerOrReadOnly
 from snippets.models import Snippet
 from snippets.serializers import SnippetSerializer, UserSerializer
@@ -13,25 +15,58 @@ from rest_framework.views import APIView
 from rest_framework import mixins
 from rest_framework import generics
 from rest_framework import permissions
+from rest_framework import renderers
 # Create your views here.
-# tutorial 4
-class UserList(generics.ListAPIView):
+# tutorial 5
+@api_view(['GET'])
+def api_root(request, format=None):
+    return Response({
+        'users' : reverse('user-list', request=request, format=format)
+    })
+# tutorial 6
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-class UserDetail(generics.RetrieveAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-# tutorial3 - generic
-class SnippetList(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+
+class SnippetViewSet(viewsets.ModelViewSet):
     queryset = Snippet.objects.all()
     serializer_class = SnippetSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly,
+                          IsOwnerOrReadOnly]
+   
+
+    @action(detail=True, renderer_classes=[renderers.StaticHTMLRenderer])
+    def highlight(self, request, *args, **kwargs):
+        snippet = self.get_object()
+        return Response(snippet.highlighted)
+
     def perform_create(self, serializer):
-        serializer.save(owner= self.request.user)
-class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly, )
-    queryset = Snippet.objects.all()
-    serializer_class = SnippetSerializer
+        serializer.save(owner=self.request.user)
+# tutorial 4
+# class UserList(generics.ListAPIView):
+#     queryset = User.objects.all()
+#     serializer_class = UserSerializer
+# class UserDetail(generics.RetrieveAPIView):
+#     queryset = User.objects.all()
+#     serializer_class = UserSerializer
+# # tutorial3 - generic
+# class SnippetList(generics.ListCreateAPIView):
+#     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+#     queryset = Snippet.objects.all()
+#     serializer_class = SnippetSerializer
+#     def perform_create(self, serializer):
+#         serializer.save(owner= self.request.user)
+# class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
+#     permission_classes = (permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly, )
+#     queryset = Snippet.objects.all()
+#     serializer_class = SnippetSerializer
+
+# class SnippetHighlight(generics.GenericAPIView):
+#     queryset = Snippet.objects.all()
+#     renderer_classes = [renderers.StaticHTMLRenderer]
+#     def get(self, request, *args, **kwargs):
+#         snippet = self.get_object()
+#         return Response(snippet.highlighted)
 #tutorial3 - mixins
 # class SnippetList(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
 #     queryset = Snippet.objects.all()
